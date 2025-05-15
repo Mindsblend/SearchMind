@@ -60,10 +60,34 @@ final class SearchMindTests: XCTestCase {
         XCTAssertFalse(results.isEmpty, "Should find at least one file with fuzzy matching")
         XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt with fuzzy matching")
     }
-    
+
+  /// Test Semantic Search using GPT Embeddings
+  func testSemanticSearch() async throws {
+      // Given: Define search options for semantic search
+      let options = SearchOptions(
+          semantic: true,
+          searchPaths: [temporaryDirectory]
+      )
+
+      // Sample query and expected result
+      let query = "search terms"
+      let expectedFile = "document.doc"
+
+      // When: Perform the search using the 'search' method of the SearchMind class
+      let results = try await search.search(query, type: .fileContents, options: options)
+
+      // Then: Assert that the search returns at least one result
+      XCTAssertFalse(results.isEmpty, "Should find results for semantic search")
+
+      // And: Assert that the expected file is found based on the semantic relevance
+      XCTAssertTrue(results.contains { $0.path.contains(expectedFile) }, "Should find the document.doc file based on semantic search")
+  }
+
+
     func testFileContentSearch() async throws {
         // Test file content search
         let options = SearchOptions(
+            patternMatch: true,
             searchPaths: [temporaryDirectory]
         )
         
