@@ -381,7 +381,33 @@ public struct SearchOptions: Sendable {
     /// - Note: This option only affects `.file` searches, not `.fileContents` searches.
     /// - Important: Fuzzy matching may be slower for large directory structures.
     public let fuzzyMatching: Bool
-    
+
+  /// Enables semantic search using a large language model.
+  ///
+  /// When `true`, `.fileContents` searches will be powered by GPT-based embeddings
+  /// that understand the **meaning** of the query and the content, rather than just
+  /// relying on exact or fuzzy text matches.
+  ///
+  /// This allows users to find relevant results based on intent and context. For example,
+  /// searching for `"authentication"` might match content discussing `"login systems"`
+  /// or `"OAuth flows"`, even if those exact words don’t appear in the text.
+  ///
+  /// - Important: Requires a valid OpenAI API key and network access.
+  /// - Note: This option only affects `.fileContents` searches.
+  /// - SeeAlso: `patternMatch` for syntax-based searching, and `fuzzyMatching` for typo tolerance.
+    public let semantic: Bool
+
+    /// Enables pattern-based search using regular expressions.
+    ///
+    /// When `true`, `.fileContents` searches will interpret the query as a
+    /// regular expression pattern (e.g., `"\bclass\b"`).
+    ///
+    /// This is useful for advanced filtering based on syntax or naming conventions.
+    ///
+    /// - Note: This option only affects `.fileContents` searches.
+    /// - Warning: Malformed regex patterns may cause errors or performance issues.
+    public let patternMatch: Bool
+
     /// The maximum number of results to return from a search
     ///
     /// Limits the number of results returned from a search operation.
@@ -440,6 +466,8 @@ public struct SearchOptions: Sendable {
     public init(
         caseSensitive: Bool = false,
         fuzzyMatching: Bool = true,
+        semantic: Bool = false,
+        patternMatch: Bool = false,
         maxResults: Int = 100,
         searchPaths: [URL]? = nil,
         fileExtensions: [String]? = nil,
@@ -447,6 +475,8 @@ public struct SearchOptions: Sendable {
     ) {
         self.caseSensitive = caseSensitive
         self.fuzzyMatching = fuzzyMatching
+        self.semantic = semantic
+        self.patternMatch = patternMatch
         self.maxResults = max(1, maxResults) // Ensure maxResults is at least 1
         self.searchPaths = searchPaths
         self.fileExtensions = fileExtensions
