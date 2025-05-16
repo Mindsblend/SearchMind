@@ -13,15 +13,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Install Swift 6.0.0
-      run: |
-        git clone https://github.com/kylef/swiftenv.git ~/.swiftenv
-        echo 'export SWIFTENV_ROOT="$HOME/.swiftenv"' >> $HOME/.bash_profile
-        echo 'export PATH="$SWIFTENV_ROOT/bin:$PATH"' >> $HOME/.bash_profile
-        echo 'eval "$(swiftenv init -)"' >> $HOME/.bash_profile
-        source $HOME/.bash_profile
-        swiftenv install 6.0.0
-        swiftenv global 6.0.0
     - name: Build
       run: swift build -v
     - name: Run tests
