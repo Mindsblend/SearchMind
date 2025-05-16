@@ -1,125 +1,124 @@
-import XCTest
 import Foundation
 @testable import SearchMind
+import XCTest
 
 final class SearchMindTests: XCTestCase {
-    
     private var temporaryDirectory: URL!
     private var search: SearchMind!
-    
+
     override func setUp() async throws {
         try await super.setUp()
-        
+
         // Create temporary directory for file tests
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        self.temporaryDirectory = tempDir
-        
+        temporaryDirectory = tempDir
+
         // Create sample files for testing
         try "Sample content for testing".write(to: tempDir.appendingPathComponent("sample.txt"), atomically: true, encoding: .utf8)
         try "Another sample text file".write(to: tempDir.appendingPathComponent("text_file.txt"), atomically: true, encoding: .utf8)
         try "Test document with search terms".write(to: tempDir.appendingPathComponent("document.doc"), atomically: true, encoding: .utf8)
 
-        self.search = SearchMind()
+        search = SearchMind()
     }
-    
+
     override func tearDown() async throws {
         try await super.tearDown()
-        
+
         // Clean up temporary directory
         if let tempDir = temporaryDirectory {
             try FileManager.default.removeItem(at: tempDir)
         }
-        
+
         // Clean up search instance
         search = nil
     }
-    
+
     /// Test exact file search
     func testFileSearch() async throws {
         let options = SearchOptions(
             fuzzyMatching: false,
             searchPaths: [temporaryDirectory]
         )
-        
+
         let results = try await search.search("sample", type: .file, options: options)
-        
+
         XCTAssertFalse(results.isEmpty, "Should find at least one file")
         XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt")
     }
-    
+
     func testFuzzyFileSearch() async throws {
         let options = SearchOptions(
             fuzzyMatching: true,
             searchPaths: [temporaryDirectory]
         )
-        
+
         let results = try await search.search("sampl", type: .file, options: options)
-        
+
         XCTAssertFalse(results.isEmpty, "Should find at least one file with fuzzy matching")
         XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt with fuzzy matching")
     }
-    
+
     func testFileContentSearch() async throws {
         // Test file content search
         let options = SearchOptions(
             searchPaths: [temporaryDirectory]
         )
-        
+
         let results = try await search.search("testing", type: .fileContents, options: options)
-        
+
         XCTAssertFalse(results.isEmpty, "Should find file containing 'testing'")
         XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt containing 'testing'")
     }
-    
+
     func testFileExtensionFiltering() async throws {
         // Test file extension filtering
         let options = SearchOptions(
             searchPaths: [temporaryDirectory],
             fileExtensions: ["txt"]
         )
-        
+
         let results = try await search.search("sample", type: .file, options: options)
-        
+
         XCTAssertFalse(results.isEmpty, "Should find txt files")
         XCTAssertTrue(results.all { $0.path.hasSuffix(".txt") }, "Should only find .txt files")
         XCTAssertFalse(results.contains { $0.path.hasSuffix(".doc") }, "Should not find .doc files")
     }
-    
+
     func testCaseInsensitiveSearch() async throws {
         // Test case insensitive search
         let options = SearchOptions(
             caseSensitive: false,
             searchPaths: [temporaryDirectory]
         )
-        
+
         let results = try await search.search("SAMPLE", type: .fileContents, options: options)
-        
+
         XCTAssertFalse(results.isEmpty, "Should find matches with case insensitive search")
     }
-    
+
     func testCaseSensitiveSearch() async throws {
         // Test case sensitive search
         let options = SearchOptions(
             caseSensitive: true,
             searchPaths: [temporaryDirectory]
         )
-        
+
         let results = try await search.search("SAMPLE", type: .fileContents, options: options)
-        
+
         // Assuming our test files don't contain uppercase "SAMPLE"
         XCTAssertTrue(results.isEmpty, "Should not find matches with case sensitive search")
     }
-    
+
     func testMultiSearch() async throws {
         // Test searching for multiple terms
         let options = SearchOptions(
             searchPaths: [temporaryDirectory]
         )
-        
+
         let results = try await search.multiSearch(terms: ["sample", "testing"], type: .fileContents, options: options)
-        
+
         XCTAssertEqual(results.count, 2, "Should return results for both search terms")
         XCTAssertTrue(results.keys.contains("sample"), "Should contain results for 'sample'")
         XCTAssertTrue(results.keys.contains("testing"), "Should contain results for 'testing'")
@@ -128,6 +127,6 @@ final class SearchMindTests: XCTestCase {
 
 extension Array {
     func all(_ predicate: (Element) -> Bool) -> Bool {
-        return !contains { !predicate($0) }
+        !contains { !predicate($0) }
     }
 }

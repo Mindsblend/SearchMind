@@ -1,5 +1,5 @@
-import Foundation
 import Algorithms
+import Foundation
 
 /// Main entry point for searching files and file contents
 ///
@@ -47,7 +47,6 @@ import Algorithms
 /// making it safe to use with Swift's structured concurrency. All search results are
 /// immutable value types.
 public final class SearchMind: Sendable {
-    
     /// Result of a search operation
     ///
     /// SearchResult represents a single match found during a search operation.
@@ -76,7 +75,7 @@ public final class SearchMind: Sendable {
         /// This can be useful when presenting results to differentiate between
         /// matches in file names versus matches in content.
         public let matchType: SearchType
-        
+
         /// The file path where the match was found
         ///
         /// For both file name and content searches, this is the path to the file
@@ -84,7 +83,7 @@ public final class SearchMind: Sendable {
         ///
         /// - Note: To get just the filename, use `URL(fileURLWithPath: path).lastPathComponent`
         public let path: String
-        
+
         /// Relevance score for this match (0.0 to 1.0)
         ///
         /// A value between 0.0 and 1.0 indicating how relevant this result is to
@@ -96,14 +95,14 @@ public final class SearchMind: Sendable {
         /// Results returned by search methods are sorted by relevance score in
         /// descending order (highest relevance first).
         public let relevanceScore: Double
-        
+
         /// The search terms that matched this result
         ///
         /// Contains the search terms that led to this match. For single-term searches,
         /// this array will contain just one element. For multi-term searches using
         /// `multiSearch`, this array may contain multiple matching terms.
         public let matchedTerms: [String]
-        
+
         /// Surrounding context for content matches
         ///
         /// For `.fileContents` searches, this provides text surrounding the match
@@ -115,7 +114,7 @@ public final class SearchMind: Sendable {
         /// - Note: The context typically includes about 50 characters before and after
         ///   the match, depending on the content structure.
         public let context: String?
-        
+
         /// Creates a new search result
         ///
         /// - Parameters:
@@ -134,9 +133,9 @@ public final class SearchMind: Sendable {
             self.context = context
         }
     }
-    
+
     private let searchEngine: SearchEngine
-    
+
     /// Initialize with default search engine
     ///
     /// Creates a new SearchMind instance with the default search engine implementation.
@@ -146,9 +145,9 @@ public final class SearchMind: Sendable {
     /// let searchMind = SearchMind()
     /// ```
     public init() {
-        self.searchEngine = DefaultSearchEngine()
+        searchEngine = DefaultSearchEngine()
     }
-    
+
     /// Initialize with custom search engine
     ///
     /// Creates a new SearchMind instance with a custom search engine implementation.
@@ -164,7 +163,7 @@ public final class SearchMind: Sendable {
     public init(searchEngine: SearchEngine) {
         self.searchEngine = searchEngine
     }
-    
+
     /// Searches for a single term
     ///
     /// Performs a search operation for a single term using the specified search type and options.
@@ -201,7 +200,7 @@ public final class SearchMind: Sendable {
         guard !term.isEmpty else {
             throw SearchError.emptySearchTerm
         }
-        
+
         // Validate search paths if provided
         if let searchPaths = options.searchPaths {
             for path in searchPaths {
@@ -211,11 +210,11 @@ public final class SearchMind: Sendable {
                 }
             }
         }
-        
+
         // Perform search with validated inputs
         return try await searchEngine.search(term: term, type: type, options: options)
     }
-    
+
     /// Searches for multiple terms concurrently
     ///
     /// Performs parallel search operations for multiple terms, improving performance
@@ -252,33 +251,33 @@ public final class SearchMind: Sendable {
         guard !terms.isEmpty else {
             return [:]
         }
-        
+
         // Execute searches concurrently and collect results
         var results = [String: [SearchResult]]()
-        
+
         // Copy search engine to local constant to avoid capturing self
-        let engine = self.searchEngine
-        
+        let engine = searchEngine
+
         // Using async let for concurrent execution
         try await withThrowingTaskGroup(of: (String, [SearchResult]).self) { group in
             for term in terms {
                 let termCopy = term // Capture the term locally
                 let typeCopy = type
                 let optionsCopy = options
-                
+
                 group.addTask {
                     // Directly call engine's search method
                     let searchResults = try await engine.search(term: termCopy, type: typeCopy, options: optionsCopy)
                     return (termCopy, searchResults)
                 }
             }
-            
+
             // Collect results as they complete
             for try await (term, searchResults) in group {
                 results[term] = searchResults
             }
         }
-        
+
         return results
     }
 }
@@ -307,7 +306,7 @@ public enum SearchType: String, CaseIterable, Sendable {
     /// let results = try await searchMind.search("model", type: .file, options: options)
     /// ```
     case file
-    
+
     /// Searches for matches within file contents
     ///
     /// This search type performs a full-text search inside files to find matches.
@@ -321,7 +320,7 @@ public enum SearchType: String, CaseIterable, Sendable {
     /// // Find Swift files containing "protocol" in their contents
     /// let options = SearchOptions(fileExtensions: ["swift"])
     /// let results = try await searchMind.search("protocol", type: .fileContents, options: options)
-    /// 
+    ///
     /// // Use the context property to see match surroundings
     /// for result in results {
     ///     print("Match in \(result.path):")
@@ -369,7 +368,7 @@ public struct SearchOptions: Sendable {
     /// let options = SearchOptions(caseSensitive: true)
     /// ```
     public let caseSensitive: Bool
-    
+
     /// Enables approximate (fuzzy) matching for file name searches
     ///
     /// When `true` (default), file name searches will use Levenshtein distance
@@ -381,7 +380,7 @@ public struct SearchOptions: Sendable {
     /// - Note: This option only affects `.file` searches, not `.fileContents` searches.
     /// - Important: Fuzzy matching may be slower for large directory structures.
     public let fuzzyMatching: Bool
-    
+
     /// The maximum number of results to return from a search
     ///
     /// Limits the number of results returned from a search operation.
@@ -391,7 +390,7 @@ public struct SearchOptions: Sendable {
     /// Results are sorted by relevance score before being limited, so the
     /// most relevant matches are always included.
     public let maxResults: Int
-    
+
     /// Specifies the directories or files to search
     ///
     /// When provided, the search will only look in these locations.
@@ -400,7 +399,7 @@ public struct SearchOptions: Sendable {
     /// - Note: If a URL points to a file, only that file will be searched.
     ///   If it points to a directory, all supported files in that directory will be searched.
     public let searchPaths: [URL]?
-    
+
     /// Limits the search to files with specific extensions
     ///
     /// When provided, only files with these extensions will be included in the search.
@@ -414,7 +413,7 @@ public struct SearchOptions: Sendable {
     /// let options = SearchOptions(fileExtensions: ["swift", "md"])
     /// ```
     public let fileExtensions: [String]?
-    
+
     /// Specifies a maximum duration for the search operation
     ///
     /// When provided, the search will be cancelled if it takes longer than
@@ -425,7 +424,7 @@ public struct SearchOptions: Sendable {
     ///
     /// - Note: If a timeout occurs, a `SearchError.searchTimeout` error will be thrown.
     public let timeout: TimeInterval?
-    
+
     /// Creates a new search options configuration
     ///
     /// - Parameters:

@@ -30,7 +30,7 @@ public enum SearchError: Error, LocalizedError, Sendable {
     ///
     /// The associated value contains the path that was not found.
     case invalidSearchPath(String)
-    
+
     /// Permission denied when trying to access a file
     ///
     /// This error occurs when the search operation cannot read a file due to
@@ -38,7 +38,7 @@ public enum SearchError: Error, LocalizedError, Sendable {
     ///
     /// The associated value contains the path to the file that could not be accessed.
     case fileAccessDenied(String)
-    
+
     /// Search operation exceeded the specified timeout
     ///
     /// This error occurs when a search operation takes longer than the timeout
@@ -46,35 +46,35 @@ public enum SearchError: Error, LocalizedError, Sendable {
     ///
     /// This is particularly common for content searches in large directories.
     case searchTimeout
-    
+
     /// Search term cannot be empty
     ///
     /// This error occurs when an empty string is provided as the search term.
     /// Search terms must contain at least one character.
     case emptySearchTerm
-    
+
     /// An unexpected internal error occurred
     ///
     /// This error represents unexpected issues that may occur during search operations.
     ///
     /// The associated value contains a message with details about the error.
     case internalError(String)
-    
+
     /// Human-readable description of the error
     ///
     /// This property is part of the `LocalizedError` protocol and provides
     /// user-friendly error messages suitable for displaying to users.
     public var errorDescription: String? {
         switch self {
-        case .invalidSearchPath(let path):
+        case let .invalidSearchPath(path):
             return "Invalid search path: \(path)"
-        case .fileAccessDenied(let path):
+        case let .fileAccessDenied(path):
             return "Access denied to file: \(path)"
         case .searchTimeout:
             return "Search operation timed out"
         case .emptySearchTerm:
             return "Search term cannot be empty"
-        case .internalError(let message):
+        case let .internalError(message):
             return "Internal error: \(message)"
         }
     }
