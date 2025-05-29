@@ -7,16 +7,17 @@ let package = Package(
     name: "SearchMind",
     platforms: [
         .macOS(.v12),
-        .iOS(.v15)
+        .iOS(.v15),
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SearchMind",
-            targets: ["SearchMind"]),
+            targets: ["SearchMind"]
+        ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-algorithms", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-algorithms", from: "1.0.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -24,8 +25,9 @@ let package = Package(
         .target(
             name: "SearchMind",
             dependencies: [
-                .product(name: "Algorithms", package: "swift-algorithms")
-            ]),
+                .product(name: "Algorithms", package: "swift-algorithms"),
+            ]
+        ),
         .testTarget(
             name: "SearchMindTests",
             dependencies: ["SearchMind"]
