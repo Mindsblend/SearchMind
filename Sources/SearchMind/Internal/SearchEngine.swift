@@ -72,12 +72,12 @@ final class SearchAlgorithmSelector: Sendable {
         }
 
         // For content searches, use pattern matching
-        if type == .fileContents && options.patternMatch {
+        if type == .fileContents, options.patternMatch {
             return PatternMatchAlgorithm()
         }
-      
-        if type == .fileContents && options.semantic {
-          return GPTSemanticSearchAlgorithm()
+
+        if type == .fileContents, options.semantic {
+            return GPTSemanticSearchAlgorithm()
         }
 
         // Default to fuzzy matching
@@ -471,8 +471,8 @@ struct PatternMatchAlgorithm: SearchAlgorithm {
 }
 
 /// Algorithm for semantic search with AI
-internal struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
-    func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
+    func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let termEmbedding = try await embed(text: searchTerm)
 
@@ -495,14 +495,14 @@ internal struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
         }
 
         return results.sorted { $0.relevanceScore > $1.relevanceScore }
-                      .prefix(options.maxResults)
-                      .map { $0 }
+            .prefix(options.maxResults)
+            .map { $0 }
     }
 
     private func embed(text: String) async throws -> [Double] {
         guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] else {
-                  throw NSError(domain: "OpenAI", code: 0, userInfo: [NSLocalizedDescriptionKey: "API key not found in .env"])
-              }
+            throw NSError(domain: "OpenAI", code: 0, userInfo: [NSLocalizedDescriptionKey: "API key not found in .env"])
+        }
         let request = EmbeddingRequest(model: "text-embedding-ada-002", input: [text])
         let jsonData = try JSONEncoder().encode(request)
 
@@ -530,72 +530,72 @@ internal struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
         return (magA > 0 && magB > 0) ? dot / (magA * magB) : 0
     }
 
-  private func getFilesToSearch(options: SearchOptions) async throws -> [URL] {
-      // If search paths provided, use those
-      if let searchPaths = options.searchPaths, !searchPaths.isEmpty {
-          var allFiles: [URL] = []
+    private func getFilesToSearch(options: SearchOptions) async throws -> [URL] {
+        // If search paths provided, use those
+        if let searchPaths = options.searchPaths, !searchPaths.isEmpty {
+            var allFiles: [URL] = []
 
-          for path in searchPaths {
-              // Check if the URL is a directory
-              var isDirectory: ObjCBool = false
-              let fileManager = FileManager.default
+            for path in searchPaths {
+                // Check if the URL is a directory
+                var isDirectory: ObjCBool = false
+                let fileManager = FileManager.default
 
-              guard fileManager.fileExists(atPath: path.path, isDirectory: &isDirectory) else {
-                  throw SearchError.invalidSearchPath(path.path)
-              }
+                guard fileManager.fileExists(atPath: path.path, isDirectory: &isDirectory) else {
+                    throw SearchError.invalidSearchPath(path.path)
+                }
 
-              if isDirectory.boolValue {
-                  // If it's a directory, get all files inside
-                  let contents = try fileManager.contentsOfDirectory(
-                      at: path,
-                      includingPropertiesForKeys: [.isRegularFileKey],
-                      options: [.skipsHiddenFiles]
-                  )
+                if isDirectory.boolValue {
+                    // If it's a directory, get all files inside
+                    let contents = try fileManager.contentsOfDirectory(
+                        at: path,
+                        includingPropertiesForKeys: [.isRegularFileKey],
+                        options: [.skipsHiddenFiles]
+                    )
 
-                  // Only include regular files
-                  for url in contents {
-                      if let isRegularFile = try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile, isRegularFile {
-                          allFiles.append(url)
-                      }
-                  }
-              } else {
-                  // If it's a file, add it directly
-                  allFiles.append(path)
-              }
-          }
+                    // Only include regular files
+                    for url in contents {
+                        if let isRegularFile = try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile, isRegularFile {
+                            allFiles.append(url)
+                        }
+                    }
+                } else {
+                    // If it's a file, add it directly
+                    allFiles.append(path)
+                }
+            }
 
-          // Filter by file extensions if provided
-          if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
-              return allFiles.filter { url in
-                  return fileExtensions.contains(url.pathExtension)
-              }
-          }
+            // Filter by file extensions if provided
+            if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
+                return allFiles.filter { url in
+                    fileExtensions.contains(url.pathExtension)
+                }
+            }
 
-          return allFiles
-      }
+            return allFiles
+        }
 
-      // Otherwise, search in the current directory
-      let fileManager = FileManager.default
-      let currentDirectoryURL = URL(fileURLWithPath: fileManager.currentDirectoryPath)
+        // Otherwise, search in the current directory
+        let fileManager = FileManager.default
+        let currentDirectoryURL = URL(fileURLWithPath: fileManager.currentDirectoryPath)
 
-      let contents = try fileManager.contentsOfDirectory(
-          at: currentDirectoryURL,
-          includingPropertiesForKeys: [.isRegularFileKey],
-          options: [.skipsHiddenFiles]
-      )
+        let contents = try fileManager.contentsOfDirectory(
+            at: currentDirectoryURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
 
-      // Only include regular files
-      var files = contents.filter {
-          (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) ?? false
-      }
+        // Only include regular files
+        var files = contents.filter {
+            (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) ?? false
+        }
 
-      // Filter by file extensions if provided
-      if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
-          files = files.filter { url in
-              return fileExtensions.contains(url.pathExtension)
-          }
-      }
+        // Filter by file extensions if provided
+        if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
+            files = files.filter { url in
+                fileExtensions.contains(url.pathExtension)
+            }
+        }
 
-      return files
-  }
+        return files
+    }
 }
