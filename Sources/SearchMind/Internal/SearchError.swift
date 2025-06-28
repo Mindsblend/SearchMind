@@ -60,6 +60,16 @@ public enum SearchError: Error, LocalizedError, Sendable {
     /// The associated value contains a message with details about the error.
     case internalError(String)
 
+    /// API key is not found and it's inavailable
+    ///
+    /// This error represents when the api key is missing as an environment variable
+    case missingKey
+
+    /// Failed to extract the fetched embedding data from the api
+    ///
+    /// The extraction of the data into the embedding model have failed
+    case failedEmbeddingExtraction
+
     /// Human-readable description of the error
     ///
     /// This property is part of the `LocalizedError` protocol and provides
@@ -76,6 +86,10 @@ public enum SearchError: Error, LocalizedError, Sendable {
             return "Search term cannot be empty"
         case let .internalError(message):
             return "Internal error: \(message)"
+        case .missingKey:
+            return "API key not found"
+        case .failedEmbeddingExtraction:
+            return "Failed to extract embedding from the fetched api data"
         }
     }
 }
