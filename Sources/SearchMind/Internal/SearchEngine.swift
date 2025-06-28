@@ -475,7 +475,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
     func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         guard let apiKey = options.apiKey else {
-          throw SearchError.missingKey
+            throw SearchError.missingKey
         }
         let termEmbedding = try await embed(text: searchTerm, apiKey: apiKey)
 
@@ -502,8 +502,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
             .map { $0 }
     }
 
-  private func embed(text: String, apiKey: String) async throws -> [Double] {
-
+    private func embed(text: String, apiKey: String) async throws -> [Double] {
         let request = EmbeddingRequest(model: "text-embedding-ada-002", input: [text])
         let jsonData = try JSONEncoder().encode(request)
 
