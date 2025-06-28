@@ -501,7 +501,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
 
     private func embed(text: String) async throws -> [Double] {
         guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] else {
-            throw NSError(domain: "OpenAI", code: 0, userInfo: [NSLocalizedDescriptionKey: "API key not found in .env"])
+            throw SearchError.missingKey
         }
         let request = EmbeddingRequest(model: "text-embedding-ada-002", input: [text])
         let jsonData = try JSONEncoder().encode(request)
@@ -516,7 +516,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
         let response = try JSONDecoder().decode(EmbeddingResponse.self, from: data)
 
         guard let embedding = response.data.first?.embedding else {
-            throw NSError(domain: "EmbeddingError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to extract embedding"])
+            throw SearchError.failedEmbeddingExtraction
         }
 
         return embedding
