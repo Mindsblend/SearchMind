@@ -381,7 +381,6 @@ public struct SearchOptions: Sendable {
     /// - Important: Fuzzy matching may be slower for large directory structures.
     public let fuzzyMatching: Bool
 
-
     /// Enables semantic search using a large language model.
     ///
     /// When `true`, `.fileContents` searches will be powered by GPT-based embeddings
@@ -407,7 +406,7 @@ public struct SearchOptions: Sendable {
     /// - Note: This option only affects `.fileContents` searches.
     /// - Warning: Malformed regex patterns may cause errors or performance issues.
     public let patternMatch: Bool
-  
+
     /// The maximum number of results to return from a search
     ///
     /// Limits the number of results returned from a search operation.
