@@ -369,6 +369,21 @@ public struct SearchOptions: Sendable {
     /// ```
     public let caseSensitive: Bool
 
+    /// A required API key for enabling AI-powered search algorithms, such as GPT-based semantic search.
+    ///
+    /// This key must be provided when using any search strategy that relies on external AI services.
+    /// If the key is missing and an AI-based algorithm is selected (e.g., `GPTSemanticSearchAlgorithm`),
+    /// an error will be thrown or the search will fail.
+    ///
+    /// - Important: This is mandatory for semantic searches. Omitting it while using AI algorithms
+    /// will result in runtime errors or degraded functionality.
+    ///
+    /// - Example:
+    /// ```swift
+    /// let options = SearchOptions(apiKey: "sk-...")
+    /// ```
+    public let apiKey: String?
+
     /// Enables approximate (fuzzy) matching for file name searches
     ///
     /// When `true` (default), file name searches will use Levenshtein distance
@@ -464,6 +479,7 @@ public struct SearchOptions: Sendable {
     /// - Returns: A configured SearchOptions instance
     public init(
         caseSensitive: Bool = false,
+        apiKey: String? = ProcessInfo.processInfo.environment["OPENAI_API_KEY"],
         fuzzyMatching: Bool = true,
         semantic: Bool = false,
         patternMatch: Bool = false,
@@ -473,6 +489,7 @@ public struct SearchOptions: Sendable {
         timeout: TimeInterval? = nil
     ) {
         self.caseSensitive = caseSensitive
+        self.apiKey = apiKey
         self.fuzzyMatching = fuzzyMatching
         self.semantic = semantic
         self.patternMatch = patternMatch
