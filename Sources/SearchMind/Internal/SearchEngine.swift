@@ -61,27 +61,38 @@ public final class DefaultSearchEngine: SearchEngine {
 /// Selects the most appropriate search algorithm based on inputs
 final class SearchAlgorithmSelector: Sendable {
     func selectAlgorithm(for _: String, type: SearchType, options: SearchOptions) -> SearchAlgorithm {
-        // For simple name searches without fuzzy matching, use exact matching
-        if type == .file, !options.fuzzyMatching {
-            return ExactMatchAlgorithm()
+        switch type {
+        case .file:
+            return selectFileAlgorithm(options: options)
+        case .fileContents:
+            return selectFileContentsAlgorithm(options: options)
         }
+    }
 
-        // For fuzzy file name searches, use fuzzy matching
-        if type == .file, options.fuzzyMatching {
-            return FuzzyMatchAlgorithm()
-        }
-
-        // For content searches, use pattern matching
-        if type == .fileContents, options.patternMatch {
-            return PatternMatchAlgorithm()
-        }
-
-        if type == .fileContents, options.semantic {
+    private func selectFileAlgorithm(options: SearchOptions) -> SearchAlgorithm {
+        if options.semantic {
             return GPTSemanticSearchAlgorithm()
         }
+        if options.fuzzyMatching {
+            return FuzzyMatchAlgorithm()
+        }
+        if options.patternMatch {
+            return PatternMatchAlgorithm()
+        }
+        return ExactMatchAlgorithm()
+    }
 
-        // Default to fuzzy matching
-        return FuzzyMatchAlgorithm()
+    private func selectFileContentsAlgorithm(options: SearchOptions) -> SearchAlgorithm {
+        if options.semantic {
+            return GPTSemanticSearchAlgorithm()
+        }
+        if options.patternMatch {
+            return PatternMatchAlgorithm()
+        }
+        if options.fuzzyMatching {
+            return FuzzyMatchAlgorithm()
+        }
+        return ExactMatchAlgorithm()
     }
 }
 
