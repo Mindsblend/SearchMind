@@ -61,12 +61,12 @@ public final class DefaultSearchEngine: SearchEngine {
 /// Selects the most appropriate search algorithm based on inputs
 final class SearchAlgorithmSelector: Sendable {
     func selectAlgorithm(for _: String, type: SearchType, options: SearchOptions) -> SearchAlgorithm {
-      switch type {
+        switch type {
         case .file:
-          return selectFileAlgorithm(options: options)
+            return selectFileAlgorithm(options: options)
         case .fileContents:
-          return selectFileContentsAlgorithm(options: options)
-      }
+            return selectFileContentsAlgorithm(options: options)
+        }
     }
 
     private func selectFileAlgorithm(options: SearchOptions) -> SearchAlgorithm {
