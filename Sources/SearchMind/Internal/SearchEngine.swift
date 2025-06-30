@@ -326,14 +326,17 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
     func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
-        let termEmbedding = try await embed(text: searchTerm)
+        guard let apiKey = options.apiKey else {
+            throw SearchError.missingKey
+        }
+        let termEmbedding = try await embed(text: searchTerm, apiKey: apiKey)
 
         var results: [SearchMind.SearchResult] = []
 
         for item in items {
             let url = URL(fileURLWithPath: item.path)
             let content = try String(contentsOf: url)
-            let fileEmbedding = try await embed(text: content)
+          let fileEmbedding = try await embed(text: content, apiKey: apiKey)
 
             let similarity = cosineSimilarity(termEmbedding, fileEmbedding)
             if similarity > 0.4 {
@@ -351,10 +354,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
             .map { $0 }
     }
 
-    private func embed(text: String) async throws -> [Double] {
-        guard let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] else {
-            throw SearchError.missingKey
-        }
+    private func embed(text: String, apiKey: String) async throws -> [Double] {
         let request = EmbeddingRequest(model: "text-embedding-ada-002", input: [text])
         let jsonData = try JSONEncoder().encode(request)
 
