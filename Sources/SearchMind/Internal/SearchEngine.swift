@@ -70,32 +70,32 @@ final class SearchAlgorithmSelector: Sendable {
     }
 
     private func selectFileAlgorithm(options: SearchOptions) -> SearchAlgorithm {
-      let provider = FileProvider()
+        let provider = FileProvider()
 
         if options.semantic {
-          return GPTSemanticSearchAlgorithm(provider: provider)
+            return GPTSemanticSearchAlgorithm(provider: provider)
         }
         if options.fuzzyMatching {
-          return FuzzyMatchAlgorithm(provider: provider)
+            return FuzzyMatchAlgorithm(provider: provider)
         }
         if options.patternMatch {
-          return PatternMatchAlgorithm(provider: provider)
+            return PatternMatchAlgorithm(provider: provider)
         }
-      return ExactMatchAlgorithm(provider: provider)
+        return ExactMatchAlgorithm(provider: provider)
     }
 
     private func selectFileContentsAlgorithm(options: SearchOptions) -> SearchAlgorithm {
-      let provider = FileProvider()
+        let provider = FileProvider()
         if options.semantic {
-          return GPTSemanticSearchAlgorithm(provider: provider)
+            return GPTSemanticSearchAlgorithm(provider: provider)
         }
         if options.patternMatch {
-          return PatternMatchAlgorithm(provider: provider)
+            return PatternMatchAlgorithm(provider: provider)
         }
         if options.fuzzyMatching {
-          return FuzzyMatchAlgorithm(provider: provider)
+            return FuzzyMatchAlgorithm(provider: provider)
         }
-      return ExactMatchAlgorithm(provider: provider)
+        return ExactMatchAlgorithm(provider: provider)
     }
 }
 
@@ -110,47 +110,47 @@ protocol Provider: Sendable {
 }
 
 final class FileProvider: Provider {
-  func fetchItems(for options: SearchOptions) async throws -> [SearchableItem] {
-          let fileManager = FileManager.default
-          var allFiles: [URL] = []
+    func fetchItems(for options: SearchOptions) async throws -> [SearchableItem] {
+        let fileManager = FileManager.default
+        var allFiles: [URL] = []
 
-          let searchPaths = options.searchPaths ?? [URL(fileURLWithPath: fileManager.currentDirectoryPath)]
-          for path in searchPaths {
-              var isDirectory: ObjCBool = false
+        let searchPaths = options.searchPaths ?? [URL(fileURLWithPath: fileManager.currentDirectoryPath)]
+        for path in searchPaths {
+            var isDirectory: ObjCBool = false
 
-              guard fileManager.fileExists(atPath: path.path, isDirectory: &isDirectory) else {
-                  throw SearchError.invalidSearchPath(path.path)
-              }
+            guard fileManager.fileExists(atPath: path.path, isDirectory: &isDirectory) else {
+                throw SearchError.invalidSearchPath(path.path)
+            }
 
-              if isDirectory.boolValue {
-                  let contents = try fileManager.contentsOfDirectory(
-                      at: path,
-                      includingPropertiesForKeys: [.isRegularFileKey],
-                      options: [.skipsHiddenFiles]
-                  )
-                  for url in contents {
-                      if let isRegular = try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile, isRegular {
-                          allFiles.append(url)
-                      }
-                  }
-              } else {
-                  allFiles.append(path)
-              }
-          }
+            if isDirectory.boolValue {
+                let contents = try fileManager.contentsOfDirectory(
+                    at: path,
+                    includingPropertiesForKeys: [.isRegularFileKey],
+                    options: [.skipsHiddenFiles]
+                )
+                for url in contents {
+                    if let isRegular = try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile, isRegular {
+                        allFiles.append(url)
+                    }
+                }
+            } else {
+                allFiles.append(path)
+            }
+        }
 
-          if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
-              allFiles = allFiles.filter { fileExtensions.contains($0.pathExtension) }
-          }
+        if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
+            allFiles = allFiles.filter { fileExtensions.contains($0.pathExtension) }
+        }
 
-          return allFiles.map {
+        return allFiles.map {
             SearchableItem(id: UUID().uuidString, title: $0.lastPathComponent, content: nil, metadata: nil, path: $0.path)
-          }
-      }
+        }
+    }
 }
 
 /// Algorithm for exact string matching
 struct ExactMatchAlgorithm: SearchAlgorithm {
-  let provider: Provider
+    let provider: Provider
 
     func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
@@ -159,21 +159,20 @@ struct ExactMatchAlgorithm: SearchAlgorithm {
         // Filter files based on search term
         var results: [SearchMind.SearchResult] = []
 
+        for item in items {
+            let title = options.caseSensitive ? item.title : item.title.lowercased()
 
-      for item in items {
-          let title = options.caseSensitive ? item.title : item.title.lowercased()
+            if title.contains(searchTerm) {
+                let score = title == searchTerm ? 1.0 : 0.7
 
-          if title.contains(searchTerm) {
-              let score = title == searchTerm ? 1.0 : 0.7
-
-              results.append(SearchMind.SearchResult(
-                  matchType: .file,
-                  path: item.path,
-                  relevanceScore: score,
-                  matchedTerms: [term]
-              ))
-          }
-      }
+                results.append(SearchMind.SearchResult(
+                    matchType: .file,
+                    path: item.path,
+                    relevanceScore: score,
+                    matchedTerms: [term]
+                ))
+            }
+        }
 
         // Sort by relevance score (highest first)
         return results.sorted { $0.relevanceScore > $1.relevanceScore }
@@ -182,7 +181,7 @@ struct ExactMatchAlgorithm: SearchAlgorithm {
 
 /// Algorithm for fuzzy string matching using Swift Algorithms
 struct FuzzyMatchAlgorithm: SearchAlgorithm {
-  let provider: Provider
+    let provider: Provider
     func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
@@ -322,7 +321,7 @@ struct PatternMatchAlgorithm: SearchAlgorithm {
 
 /// Algorithm for semantic search with AI
 struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
-  let provider: Provider
+    let provider: Provider
     func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
@@ -336,7 +335,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
         for item in items {
             let url = URL(fileURLWithPath: item.path)
             let content = try String(contentsOf: url)
-          let fileEmbedding = try await embed(text: content, apiKey: apiKey)
+            let fileEmbedding = try await embed(text: content, apiKey: apiKey)
 
             let similarity = cosineSimilarity(termEmbedding, fileEmbedding)
             if similarity > 0.4 {

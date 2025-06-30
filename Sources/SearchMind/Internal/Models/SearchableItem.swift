@@ -5,5 +5,5 @@ struct SearchableItem: Sendable {
     let title: String
     let content: String?
     let metadata: [String: String]?
-  let path: String
+    let path: String
 }
