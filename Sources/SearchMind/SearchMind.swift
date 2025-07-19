@@ -200,17 +200,6 @@ public final class SearchMind: Sendable {
         guard !term.isEmpty else {
             throw SearchError.emptySearchTerm
         }
-
-        // Validate search paths if provided
-        if let searchPaths = options.searchPaths {
-            for path in searchPaths {
-                var isDirectory: ObjCBool = false
-                guard FileManager.default.fileExists(atPath: path.path, isDirectory: &isDirectory) else {
-                    throw SearchError.invalidSearchPath(path.path)
-                }
-            }
-        }
-
         // Perform search with validated inputs
         return try await searchEngine.search(term: term, type: type, options: options)
     }
@@ -330,6 +319,34 @@ public enum SearchType: String, CaseIterable, Sendable {
     /// }
     /// ```
     case fileContents
+
+    /// Searches for matches in connected databases
+    ///
+    /// This search type performs a query on the connected database rather than the local filesystem.
+    /// It is useful when your search source is remote or dynamically loaded, such as a Firebase Firestore,
+    /// Realtime Database, Core Data, or SQL-based system.
+    /// - Warning: This method currently supports firebase realtime databases at the moment. Other database types
+    ///   like CoreData, SQLDatabases, Firestore and etc will be supoorted later.
+    ///
+    /// - Important: Make sure the database is properly initialized and configured before using this search type.
+    ///   The behavior and performance of the query will vary based on the database type, schema structure, and indexing.
+    ///
+    /// - Note: When combined with `fuzzyMatching: true` in `SearchOptions`, results will be ranked using
+    ///   approximate string matching logic if supported by the underlying database adapter.
+    ///
+    /// ```swift
+    /// // Search a Firebase Firestore database for documents matching "swift"
+    /// let options = SearchOptions(databaseType: .firestore, fuzzyMatching: true)
+    /// let results = try await searchMind.search("swift", type: .database, options: options)
+    ///
+    /// for result in results {
+    ///     print("Match in database document: \(result.path)")
+    ///     if let metadata = result.metadata {
+    ///         print("Metadata: \(metadata)")
+    ///     }
+    /// }
+    /// ```
+    case database
 }
 
 /// Options for configuring search behavior
@@ -439,7 +456,7 @@ public struct SearchOptions: Sendable {
     ///
     /// - Note: If a URL points to a file, only that file will be searched.
     ///   If it points to a directory, all supported files in that directory will be searched.
-    public let searchPaths: [URL]?
+    public let searchPaths: [String]?
 
     /// Limits the search to files with specific extensions
     ///
@@ -484,7 +501,7 @@ public struct SearchOptions: Sendable {
         semantic: Bool = false,
         patternMatch: Bool = false,
         maxResults: Int = 100,
-        searchPaths: [URL]? = nil,
+        searchPaths: [String]? = nil,
         fileExtensions: [String]? = nil,
         timeout: TimeInterval? = nil
     ) {

@@ -1,6 +1,4 @@
 // swift-tools-version: 5.5
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
 import PackageDescription
 
 let package = Package(
@@ -10,7 +8,6 @@ let package = Package(
         .iOS(.v15),
     ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SearchMind",
             targets: ["SearchMind"]
@@ -18,19 +15,23 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-algorithms", from: "1.0.0"),
+        .package(url: "https://github.com/firebase/firebase-ios-sdk.git", from: "10.0.0"),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "SearchMind",
             dependencies: [
                 .product(name: "Algorithms", package: "swift-algorithms"),
+                .product(name: "FirebaseDatabase", package: "firebase-ios-sdk"),
             ]
+            // No resources here — your Firebase plist is for tests only
         ),
         .testTarget(
             name: "SearchMindTests",
-            dependencies: ["SearchMind"]
+            dependencies: ["SearchMind"],
+            resources: [
+                .process("Resources/GoogleService-Info.plist") // 🔥 Put the file here
+            ]
         ),
     ]
 )

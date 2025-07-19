@@ -1,155 +1,202 @@
 import Foundation
 @testable import SearchMind
+import Firebase
 import XCTest
 
 final class SearchMindTests: XCTestCase {
-    private var temporaryDirectory: URL!
+    private var testWorkspaceDirectoryURL: URL!
+    private var testWorkspacePath: String!
+    private var testDatabasePath: String!
     private var search: SearchMind!
+
+    var provider: RealtimeDatabaseProvider!
+
+    enum SearchScope: CaseIterable {
+        case file, fileContents, database
+
+        var type: SearchType {
+            switch self {
+            case .file: return .file
+            case .fileContents: return .fileContents
+            case .database: return .database
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .file: return "File"
+            case .fileContents: return "FileContents"
+            case .database: return "Database"
+            }
+        }
+    }
+
+    enum SearchAlgorithm: CaseIterable {
+        case exact, fuzzy, semantic, patternMatch
+
+        var query: String {
+            switch self {
+            case .exact: return "sample"
+            case .fuzzy: return "sample content"
+            case .semantic: return "search terms"
+            case .patternMatch: return "testing"
+            }
+        }
+
+        var description: String {
+            switch self {
+            case .exact: return "Exact"
+            case .fuzzy: return "Fuzzy"
+            case .semantic: return "Semantic"
+            case .patternMatch: return "PatternMatch"
+            }
+        }
+
+        func buildOptions(searchPaths: [String]) -> SearchOptions {
+            switch self {
+            case .exact:
+              return SearchOptions(fuzzyMatching: false, searchPaths: searchPaths)
+            case .fuzzy:
+              return SearchOptions(fuzzyMatching: true, searchPaths: searchPaths)
+            case .semantic:
+              return SearchOptions(semantic: true, searchPaths: searchPaths)
+            case .patternMatch:
+              return SearchOptions(patternMatch: true, searchPaths: searchPaths)
+            }
+        }
+    }
 
     override func setUp() async throws {
         try await super.setUp()
-
-        // Create temporary directory for file tests
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        temporaryDirectory = tempDir
-
-        // Create sample files for testing
-        try "Sample content for testing".write(to: tempDir.appendingPathComponent("sample.txt"), atomically: true, encoding: .utf8)
-        try "Another sample text file".write(to: tempDir.appendingPathComponent("text_file.txt"), atomically: true, encoding: .utf8)
-        try "Test document with search terms".write(to: tempDir.appendingPathComponent("document.doc"), atomically: true, encoding: .utf8)
-
+        try setUpWorkspace()
+        try await setUpDatabase()
+        try configureFirebase()
         search = SearchMind()
     }
 
     override func tearDown() async throws {
         try await super.tearDown()
+        if let testWorkspacePath = testWorkspacePath {
+            try FileManager.default.removeItem(at: URL(fileURLWithPath: testWorkspacePath))
+        }
+        search = nil
+        provider = nil
+    }
 
-        // Clean up temporary directory
-        if let tempDir = temporaryDirectory {
-            try FileManager.default.removeItem(at: tempDir)
+    func testAllAlgorithmsAgainstAllScopes() async throws {
+        for algorithm in SearchAlgorithm.allCases {
+            for scope in SearchScope.allCases {
+                try await runSearchTest(algorithm: algorithm, scope: scope)
+            }
+        }
+    }
+
+    private func runSearchTest(algorithm: SearchAlgorithm, scope: SearchScope) async throws {
+        let searchPaths: [String] = {
+            switch scope.type {
+            case .file, .fileContents:
+                return [testWorkspacePath]
+            case .database:
+                return [testDatabasePath]
+            }
+        }()
+
+        let options = algorithm.buildOptions(searchPaths: searchPaths)
+        let results = try await search.search(algorithm.query, type: scope.type, options: options)
+        let description = "[\(algorithm.description) - \(scope.description)]"
+
+        switch (algorithm, scope) {
+        case (.patternMatch, .file):
+            XCTAssertTrue(results.contains { $0.path.contains("testing_software.txt") }, "\(description) should find testing_software.txt")
+        case (.patternMatch, .fileContents):
+            XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
+        case (.patternMatch, .database):
+            XCTAssertTrue(results.contains { $0.path.contains("test/posts/sample") }, "\(description) should find test/posts/sample")
+
+        case (.fuzzy, .file):
+            XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
+        case (.fuzzy, .fileContents):
+            XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
+        case (.fuzzy, .database):
+            XCTAssertTrue(results.contains { $0.path.contains("test/posts/sample") }, "\(description) should find test/posts/sample")
+
+        case (.exact, .file):
+            XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
+        case (.exact, .fileContents):
+            XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
+        case (.exact, .database):
+            XCTAssertTrue(results.contains { $0.path.contains("test/posts/sample") }, "\(description) should find test/posts/sample")
+
+        case (.semantic, .file):
+            XCTAssertTrue(results.contains { $0.path.contains("document.doc") }, "\(description) should find document.doc")
+        case (.semantic, .fileContents):
+            XCTAssertTrue(results.contains { $0.path.contains("document.doc") }, "\(description) should find document.doc")
+        case (.semantic, .database):
+            XCTAssertTrue(results.contains { $0.path.contains("test/posts/document") }, "\(description) should find test/posts/document")
+        }
+    }
+
+    private func setUpWorkspace() throws {
+        testWorkspaceDirectoryURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        testWorkspacePath = testWorkspaceDirectoryURL.path
+
+        try FileManager.default.createDirectory(at: testWorkspaceDirectoryURL, withIntermediateDirectories: true)
+
+        let testFiles: [(name: String, content: String)] = [
+            ("sample.txt", "Sample content for testing"),
+            ("text_file.txt", "Another sample text file"),
+            ("testing_software.txt", "Another sample text file"),
+            ("document.doc", "Test document with search terms")
+        ]
+
+        for (fileName, content) in testFiles {
+            let path = testWorkspaceDirectoryURL.appendingPathComponent(fileName)
+            try content.write(to: path, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private func setUpDatabase() async throws {
+        testDatabasePath = "test/posts"
+        provider = RealtimeDatabaseProvider()
+        let ref = Database.database().reference(withPath: testDatabasePath)
+
+        try await ref.removeValue()
+
+        let testPosts: [String: [String: String]] = [
+            "sample": [
+                "id": "1",
+                "title": "sample",
+                "content": "Sample content for testing"
+            ],
+            "text_file": [
+                "id": "2",
+                "title": "text_file",
+                "content": "Another sample text file"
+            ],
+            "document": [
+                "id": "3",
+                "title": "document",
+                "content": "This document contains search terms for semantic match"
+            ]
+        ]
+
+        try await ref.setValue(testPosts)
+    }
+
+    private func configureFirebase() throws {
+        guard FirebaseApp.app() == nil else { return }
+
+        guard let plistPath = Bundle.module.path(forResource: "GoogleService-Info", ofType: "plist") else {
+            XCTFail("GoogleService-Info.plist not found.")
+            return
         }
 
-        // Clean up search instance
-        search = nil
-    }
+        guard let options = FirebaseOptions(contentsOfFile: plistPath) else {
+            XCTFail("Unable to create FirebaseOptions")
+            return
+        }
 
-    /// Test exact file search
-    func testFileSearch() async throws {
-        let options = SearchOptions(
-            fuzzyMatching: false,
-            searchPaths: [temporaryDirectory]
-        )
-
-        let results = try await search.search("sample", type: .file, options: options)
-
-        XCTAssertFalse(results.isEmpty, "Should find at least one file")
-        XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt")
-    }
-
-    func testFuzzyFileSearch() async throws {
-        let options = SearchOptions(
-            fuzzyMatching: true,
-            searchPaths: [temporaryDirectory]
-        )
-
-        let results = try await search.search("sampl", type: .file, options: options)
-
-        XCTAssertFalse(results.isEmpty, "Should find at least one file with fuzzy matching")
-        XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt with fuzzy matching")
-    }
-
-    /// Test Semantic Search using GPT Embeddings
-    func testSemanticSearch() async throws {
-        // Given: Define search options for semantic search
-        let options = SearchOptions(
-            semantic: true,
-            searchPaths: [temporaryDirectory]
-        )
-
-        // Sample query and expected result
-        let query = "search terms"
-        let expectedFile = "document.doc"
-
-        // When: Perform the search using the 'search' method of the SearchMind class
-        let results = try await search.search(query, type: .fileContents, options: options)
-
-        // Then: Assert that the search returns at least one result
-        XCTAssertFalse(results.isEmpty, "Should find results for semantic search")
-
-        // And: Assert that the expected file is found based on the semantic relevance
-        XCTAssertTrue(results.contains { $0.path.contains(expectedFile) }, "Should find the document.doc file based on semantic search")
-    }
-
-    func testFileContentSearch() async throws {
-        // Test file content search
-        let options = SearchOptions(
-            patternMatch: true,
-            searchPaths: [temporaryDirectory]
-        )
-
-        let results = try await search.search("testing", type: .fileContents, options: options)
-
-        XCTAssertFalse(results.isEmpty, "Should find file containing 'testing'")
-        XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "Should find sample.txt containing 'testing'")
-    }
-
-    func testFileExtensionFiltering() async throws {
-        // Test file extension filtering
-        let options = SearchOptions(
-            searchPaths: [temporaryDirectory],
-            fileExtensions: ["txt"]
-        )
-
-        let results = try await search.search("sample", type: .file, options: options)
-
-        XCTAssertFalse(results.isEmpty, "Should find txt files")
-        XCTAssertTrue(results.all { $0.path.hasSuffix(".txt") }, "Should only find .txt files")
-        XCTAssertFalse(results.contains { $0.path.hasSuffix(".doc") }, "Should not find .doc files")
-    }
-
-    func testCaseInsensitiveSearch() async throws {
-        // Test case insensitive search
-        let options = SearchOptions(
-            caseSensitive: false,
-            searchPaths: [temporaryDirectory]
-        )
-
-        let results = try await search.search("SAMPLE", type: .fileContents, options: options)
-
-        XCTAssertFalse(results.isEmpty, "Should find matches with case insensitive search")
-    }
-
-    func testCaseSensitiveSearch() async throws {
-        // Test case sensitive search
-        let options = SearchOptions(
-            caseSensitive: true,
-            searchPaths: [temporaryDirectory]
-        )
-
-        let results = try await search.search("SAMPLE", type: .fileContents, options: options)
-
-        // Assuming our test files don't contain uppercase "SAMPLE"
-        XCTAssertTrue(results.isEmpty, "Should not find matches with case sensitive search")
-    }
-
-    func testMultiSearch() async throws {
-        // Test searching for multiple terms
-        let options = SearchOptions(
-            searchPaths: [temporaryDirectory]
-        )
-
-        let results = try await search.multiSearch(terms: ["sample", "testing"], type: .fileContents, options: options)
-
-        XCTAssertEqual(results.count, 2, "Should return results for both search terms")
-        XCTAssertTrue(results.keys.contains("sample"), "Should contain results for 'sample'")
-        XCTAssertTrue(results.keys.contains("testing"), "Should contain results for 'testing'")
-    }
-}
-
-extension Array {
-    func all(_ predicate: (Element) -> Bool) -> Bool {
-        !contains { !predicate($0) }
+        FirebaseApp.configure(options: options)
     }
 }
