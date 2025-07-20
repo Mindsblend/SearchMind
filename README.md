@@ -1,9 +1,60 @@
-# SearchMind
-### A Swift package for efficient and flexible searching in files and file contents, using the best algorithm for each search scenario
+<h1 align="center">SearchMind</h1>
 
-SearchMind is a macOS utility that will help you find that elusive file you've been searching for—whether it's a selfie from a few years back or an important document with many versions floating around. Our goal is to streamline file discovery so you can spend less time combing through directories and more time getting things done.
+<p align="center">
+  <strong>An Intelligent AI-Powered Search Engine Framework for Swift</strong>
+</p>
 
----
+<p align="center">
+  In today’s digital world, data grows faster than our ability to organize or find it. Files multiply, databases expand, and meaningful information hides under layers of noise.
+</p>
+
+> “The biggest challenge is not having data, but having access to the right data at the right time.” — Bernard Marr
+
+<p align="center">
+  SearchMind is a Swift package designed as an intelligent, adaptable search engine that goes beyond simple keyword matching. It understands context, adapts algorithms dynamically, and seamlessly works with both local files and remote data sources.
+</p>
+
+<p align="center">
+  Imagine embedding a search engine in your app that doesn’t just look for exact matches but interprets your intent — whether it’s in a text document, a piece of code, or structured data in a database.
+</p>
+
+> “Search isn’t just about matching strings. It’s about finding meaning in complexity.” — Kathy Baxter (Google UX researcher)
+
+<p align="center">
+  SearchMind is built to deliver insight by unifying diverse search strategies — exact, fuzzy, semantic, and pattern matching — behind a modular, extensible interface.
+</p>
+
+## What SearchMind Is
+
+SearchMind isn’t a simple search box — it’s a toolkit for building <strong>intelligent search experiences</strong>:
+
+- A framework that abstracts data providers — local file systems, database connections, or custom sources — behind a consistent interface.
+- A system that dynamically picks the best search algorithm based on data type and user needs.
+- Support for <code>.database</code> providers, enabling seamless search over structured and unstructured remote data.
+- Integration with AI-powered semantic search using embeddings to find meaning beyond text.
+
+> “In a world drowning in data, effective search is the lifeline to knowledge.” — Hilary Mason
+
+## Who Benefits
+
+- Developers building apps with complex data needs, from notes apps to code analysis tools.
+- Teams unifying search across multiple data sources without rewriting logic.
+- Software projects requiring flexible, extensible, and testable search capabilities.
+- Anyone who values fast, accurate, and context-aware search functionality in Swift.
+
+## Why It’s Important
+
+> “Without effective search, data is just noise.” — Niels Provos (Google Security Engineer)
+
+> “The ability to find relevant information quickly is the foundation of productivity.” — Satya Nadella
+
+SearchMind addresses the fundamental problem of **searching smarter, not harder**.
+
+By decoupling algorithms from data structures and supporting multiple search modes, it removes the friction developers face when integrating powerful search features.
+
+> “Great search is the difference between data overwhelm and actionable insight.” — Jeff Hammerbacher (Data Scientist)
+
+SearchMind brings that kind of amplification to your Swift projects — an intelligent engine that adapts and evolves with your data and search needs, helping users find exactly what matters.
 
 ## Table of Contents
 - [Features](#features)
@@ -18,14 +69,14 @@ SearchMind is a macOS utility that will help you find that elusive file you've b
 ---
 
 ## Features
-- Search for filenames or file contents
-- Fuzzy matching support for approximate searches
-- Configurable search options (case sensitivity, max results, etc.)
-- File extension filtering
-- Concurrent search capabilities
-- Timeout support for long-running searches
-- Clear error handling
-- Extensible architecture with swappable search algorithms
+- Search for filenames, file contents, or Firebase Realtime Database entries
+- Fuzzy, pattern, exact, and semantic search algorithm support
+- Configurable search options (case sensitivity, max results, timeout, etc.)
+- File extension and path filtering
+- Fully concurrent and asynchronous architecture
+- Dynamic provider architecture (.file, .fileContents, .database)
+- Structured metadata generation per source
+- Test matrix covering all algorithm/provider combinations
 - Command Line Interface using Swift Argument Parser
 - AI-Powered Search capabilities
 - File Preview and Quick Actions
@@ -51,13 +102,10 @@ dependencies: [
 ```swift
 import SearchMind
 
-// Initialize the search engine
 let searchMind = SearchMind()
 
-// Simple file name search
 let results = try await searchMind.search("document", type: .file)
 
-// Print results
 for result in results {
     print("Found: \(result.path) (Score: \(result.relevanceScore))")
 }
@@ -65,41 +113,41 @@ for result in results {
 
 ### Advanced Search Options
 ```swift
-// Configure search options
 let options = SearchOptions(
     caseSensitive: false,
     fuzzyMatching: true,
     maxResults: 50,
-    searchPaths: [URL(fileURLWithPath: "/path/to/search")],
+    searchPaths: ["/path/to/search"],
     fileExtensions: ["swift", "md"],
-    timeout: 5.0 // 5 second timeout
+    timeout: 5.0
 )
 
-// Search with options
 let results = try await searchMind.search("protocol", type: .fileContents, options: options)
+```
+
+### Firebase Database Search
+```swift
+let options = SearchOptions(
+    searchPaths: ["users/posts"]
+)
+
+let results = try await searchMind.search("introduction", type: .database, options: options)
 ```
 
 ### Multi-term Search
 ```swift
-// Search for multiple terms concurrently
 let terms = ["class", "struct", "enum"]
 let resultsByTerm = try await searchMind.multiSearch(terms: terms, type: .fileContents)
 
-// Process results
 for (term, results) in resultsByTerm {
-    print("Results for '\(term)':")
+    print("Results for '\(term)'):")
     for result in results {
         print("  - \(result.path) (Score: \(result.relevanceScore))")
-        if let context = result.context {
-            print("    Context: \(context)")
-        }
     }
 }
 ```
 
 ### Command Line Usage (Concept)
-Here's an example of what CLI usage might look like:
-
 ```bash
 $ searchmind help
 Available commands:
@@ -117,62 +165,46 @@ Found 2 results:
 ---
 
 ## Architecture
-SearchMind uses a strategy pattern to dynamically select the most appropriate search algorithm based on the search parameters:
+SearchMind uses a strategy pattern and modular provider-based design:
 
-- **ExactMatchAlgorithm**: Used for simple file name searches
-- **FuzzyMatchAlgorithm**: Used for approximate file name searches
-- **PatternMatchAlgorithm**: Used for file content searches
+### Algorithms
+- **ExactMatchAlgorithm**: For literal matches
+- **FuzzyMatchAlgorithm**: For approximate and misspelled queries
+- **PatternMatchAlgorithm**: For regular expression-like pattern detection
+- **GPTSemanticAlgorithm**: Embedding-based vector search (AI-powered)
 
-You can also implement custom search algorithms by conforming to the `SearchAlgorithm` protocol and initializing `SearchMind` with your custom engine.
+### Providers
+- **FileProvider**: Indexes file names only
+- **FileContentsProvider**: Indexes the contents of text-based files
+- **RealtimeDatabaseProvider**: Reads Firebase Realtime Database nodes
 
-The project is designed with a modular architecture where the core search engine is independent, allowing for integration with a GUI or other services in the future.
-
----
+### Utilities
+- `createMetadata(data:path:providerType:)`: Standardized metadata creation
+- `extractText(from:)`: Generic data extraction across varying dictionary shapes
 
 ## Project Vision
-We want **SearchMind** to leverage AI and advanced indexing to provide lightning-fast, accurate results to your file search queries. Instead of remembering cryptic folder structures or slogging through a Finder window, you'll be able to run a simple command and let SearchMind do the heavy lifting.
+SearchMind aims to be the go-to AI-powered search utility for macOS:
 
 ### Key Goals
-- Intelligent indexing and search results
-- Fast, command-line-based interactions using SwiftArgumentParser
-- Minimal resource usage
-- A user-friendly macOS integration, eventually with a GUI
-
----
+- Cross-source search (files, cloud databases, etc.)
+- Algorithm-agnostic engine with extensible input/output pipelines
+- Fast CLI and future GUI integrations
+- Accurate, AI-enhanced ranking of search results
 
 ## Roadmap
-1. **Idea & Planning**
-   - Outline architectural needs
-   - Research AI/ML solutions for file search
-2. **Proof of Concept**
-   - Implement a simple command-line interface with Swift Argument Parser
-   - Basic file indexing and search functionality
-3. **Alpha Release**
-   - Preliminary AI-driven search
-   - Collaboration with contributors to refine indexing, search logic, and user experience
-4. **Beta Release**
-   - Feature enhancements, bug fixes, and performance optimization
-5. **Stable v1.0**
-   - Polished CLI/GUI (if applicable)
-   - Comprehensive documentation and improved AI features
-
----
+1. **Initial Architecture & Setup**
+2. **File Search with CLI Support**
+3. **Semantic Search & Embedding Pipelines**
+4. **Database Search Support (✅)**
+5. **Multi-source Merging + Relevance Tuning**
+6. **GUI Layer for Spotlight-style Search Experience**
 
 ## Contributing
-We'd love your help shaping the direction of **SearchMind**. Please consider:
+We’d love your input! You can:
+- Propose features or improvements
+- Fix bugs and submit PRs
+- Help expand testing or add more providers (e.g. Firestore, iCloud, REST APIs)
 
-- Opening feature requests and bug reports
-- Submitting pull requests
-- Suggesting improvements or documentation updates
-
-Join us and help create a robust AI-powered search tool for macOS users!
-
----
 
 ## License
 MIT
-
----
-
-### Questions or Suggestions?
-Feel free to open a discussion or issue in the repository! We'd love to have your feedback on how best to implement AI-driven search on macOS using Swift.
