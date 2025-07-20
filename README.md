@@ -1,38 +1,34 @@
+<p align="center">
+  <img width="200" height="200" alt="image" src="https://github.com/user-attachments/assets/10fbab60-0723-4dd3-b7ee-f389c6bcf4b1" />
+</p>
+
 <h1 align="center">SearchMind</h1>
 
 <p align="center">
-  <strong><em>An Intelligent AI-Powered Search Engine Framework for Swift</em></strong>
+  <strong><em>An Intelligent AI-Powered Search Engine Framework for Swift</em></strong> <br />
+  A powerful and flexible Swift package designed to provide intelligent search capabilities for your applications. <br />
+  Integrate advanced AI-driven search experiences seamlessly into their apps and utilities.
 </p>
 
-<p align="center">
+## Introduction
+
   <em>In today’s digital world, data grows faster than our ability to organize or find it.</em> <br>
   <strong>Files multiply, databases expand, and meaningful information hides under layers of noise.</strong>
-</p>
 
-<p align="center">
   <em>“The biggest challenge is not having data, but having access to the right data at the right time.”</em><br>
   <strong>—Bernard Marr</strong>
-</p>
 
-<p align="center">
   <strong>SearchMind</strong> is a Swift package designed as an <strong>intelligent, adaptable search engine</strong> that goes beyond simple keyword matching.
   <br>It <em>understands context</em>, <em>adapts algorithms dynamically</em>, and <strong>seamlessly works with both local files and remote data sources</strong>.
-</p>
 
-<p align="center">
   Imagine embedding a search engine in your app that doesn’t just look for exact matches but <em>interprets your intent</em> — whether it’s in a text document, a piece of code, or structured data in a database.
-</p>
 
-<p align="center">
   <em>“Search isn’t just about matching strings. It’s about finding meaning in complexity.”</em><br>
   <strong>—Kathy Baxter (Google UX Researcher)</strong>
-</p>
 
-<p align="center">
   <strong>SearchMind</strong> is built to deliver insight by <em>unifying diverse search strategies</em> — exact, fuzzy, semantic, and pattern matching —
   <br>behind a <strong>modular, extensible interface</strong> that can power apps, developer tools, or backend engines.
-</p>
-
+  
 ## What SearchMind Is
 
 SearchMind isn’t a simple search box — it’s a toolkit for building <strong>intelligent search experiences</strong>:
