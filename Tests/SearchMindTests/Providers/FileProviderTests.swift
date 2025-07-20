@@ -1,5 +1,5 @@
-import XCTest
 @testable import SearchMind
+import XCTest
 
 final class FileProviderTests: XCTestCase {
     var fileProvider: FileProvider!
@@ -8,11 +8,11 @@ final class FileProviderTests: XCTestCase {
     override func setUpWithError() throws {
         fileProvider = FileProvider()
         tempDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).path
-      try FileManager.default.createDirectory(at: URL(fileURLWithPath: tempDirectory), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: URL(fileURLWithPath: tempDirectory), withIntermediateDirectories: true)
     }
 
     override func tearDownWithError() throws {
-      try? FileManager.default.removeItem(at: URL(fileURLWithPath: tempDirectory))
+        try? FileManager.default.removeItem(at: URL(fileURLWithPath: tempDirectory))
     }
 
     func createFile(named name: String, withExtension ext: String = "txt") throws -> URL {
@@ -45,19 +45,18 @@ final class FileProviderTests: XCTestCase {
         XCTAssertEqual(items.first?.data, "code.swift")
     }
 
-  func test_fetchItems_shouldThrowError_forInvalidPath() async throws {
-      let provider = FileProvider()
-      let invalidPath = "/invalid/path"
-      let options = SearchOptions(searchPaths: [invalidPath])
+    func test_fetchItems_shouldThrowError_forInvalidPath() async throws {
+        let provider = FileProvider()
+        let invalidPath = "/invalid/path"
+        let options = SearchOptions(searchPaths: [invalidPath])
 
-      do {
-          _ = try await provider.fetchItems(for: options)
-          XCTFail("Expected error not thrown")
-      } catch let error as SearchError {
-          XCTAssertEqual(error, .invalidSearchPath(invalidPath))
-      } catch {
-          XCTFail("Unexpected error: \(error)")
-      }
-  }
+        do {
+            _ = try await provider.fetchItems(for: options)
+            XCTFail("Expected error not thrown")
+        } catch let error as SearchError {
+            XCTAssertEqual(error, .invalidSearchPath(invalidPath))
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
 }
-

@@ -30,7 +30,7 @@ let package = Package(
             name: "SearchMindTests",
             dependencies: ["SearchMind"],
             resources: [
-                .process("Resources/GoogleService-Info.plist") // 🔥 Put the file here
+                .process("Resources/GoogleService-Info.plist"), // 🔥 Put the file here
             ]
         ),
     ]

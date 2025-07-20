@@ -112,9 +112,9 @@ public enum SearchError: Error, LocalizedError, Sendable, Equatable {
         case .searchPathUnavailable:
             return "Search path not defined. Can't begin the operation, missing the search scope"
         case .invalidSnapshotFormat:
-          return "Snapshot data is not in the expected format."
+            return "Snapshot data is not in the expected format."
         case .unableToLoadContent:
-          return "Unable to extract content from the target file"
+            return "Unable to extract content from the target file"
         }
     }
 }

@@ -1,6 +1,6 @@
+import Firebase
 import Foundation
 @testable import SearchMind
-import Firebase
 import XCTest
 
 final class SearchMindTests: XCTestCase {
@@ -55,13 +55,13 @@ final class SearchMindTests: XCTestCase {
         func buildOptions(searchPaths: [String]) -> SearchOptions {
             switch self {
             case .exact:
-              return SearchOptions(fuzzyMatching: false, searchPaths: searchPaths)
+                return SearchOptions(fuzzyMatching: false, searchPaths: searchPaths)
             case .fuzzy:
-              return SearchOptions(fuzzyMatching: true, searchPaths: searchPaths)
+                return SearchOptions(fuzzyMatching: true, searchPaths: searchPaths)
             case .semantic:
-              return SearchOptions(semantic: true, searchPaths: searchPaths)
+                return SearchOptions(semantic: true, searchPaths: searchPaths)
             case .patternMatch:
-              return SearchOptions(patternMatch: true, searchPaths: searchPaths)
+                return SearchOptions(patternMatch: true, searchPaths: searchPaths)
             }
         }
     }
@@ -112,21 +112,18 @@ final class SearchMindTests: XCTestCase {
             XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
         case (.patternMatch, .database):
             XCTAssertTrue(results.contains { $0.path.contains("test/posts/sample") }, "\(description) should find test/posts/sample")
-
         case (.fuzzy, .file):
             XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
         case (.fuzzy, .fileContents):
             XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
         case (.fuzzy, .database):
             XCTAssertTrue(results.contains { $0.path.contains("test/posts/sample") }, "\(description) should find test/posts/sample")
-
         case (.exact, .file):
             XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
         case (.exact, .fileContents):
             XCTAssertTrue(results.contains { $0.path.contains("sample.txt") }, "\(description) should find sample.txt")
         case (.exact, .database):
             XCTAssertTrue(results.contains { $0.path.contains("test/posts/sample") }, "\(description) should find test/posts/sample")
-
         case (.semantic, .file):
             XCTAssertTrue(results.contains { $0.path.contains("document.doc") }, "\(description) should find document.doc")
         case (.semantic, .fileContents):
@@ -147,7 +144,7 @@ final class SearchMindTests: XCTestCase {
             ("sample.txt", "Sample content for testing"),
             ("text_file.txt", "Another sample text file"),
             ("testing_software.txt", "Another sample text file"),
-            ("document.doc", "Test document with search terms")
+            ("document.doc", "Test document with search terms"),
         ]
 
         for (fileName, content) in testFiles {
@@ -167,18 +164,18 @@ final class SearchMindTests: XCTestCase {
             "sample": [
                 "id": "1",
                 "title": "sample",
-                "content": "Sample content for testing"
+                "content": "Sample content for testing",
             ],
             "text_file": [
                 "id": "2",
                 "title": "text_file",
-                "content": "Another sample text file"
+                "content": "Another sample text file",
             ],
             "document": [
                 "id": "3",
                 "title": "document",
-                "content": "This document contains search terms for semantic match"
-            ]
+                "content": "This document contains search terms for semantic match",
+            ],
         ]
 
         try await ref.setValue(testPosts)
