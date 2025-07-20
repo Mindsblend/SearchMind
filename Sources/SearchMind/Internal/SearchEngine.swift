@@ -62,9 +62,9 @@ public final class DefaultSearchEngine: SearchEngine {
 /// Selects the most appropriate search algorithm based on inputs
 final class SearchAlgorithmSelector: Sendable {
     func selectAlgorithm(for _: String, type: SearchType, options: SearchOptions) -> SearchAlgorithm {
-      switch type {
+        switch type {
         case .file:
-          return selectFileAlgorithm(options: options)
+            return selectFileAlgorithm(options: options)
         case .fileContents:
           return selectFileContentsAlgorithm(options: options)
         case .database:
@@ -73,18 +73,18 @@ final class SearchAlgorithmSelector: Sendable {
     }
 
     private func selectFileAlgorithm(options: SearchOptions) -> SearchAlgorithm {
-      let provider = FileProvider()
+        let provider = FileProvider()
 
         if options.semantic {
-          return GPTSemanticSearchAlgorithm(provider: provider)
+            return GPTSemanticSearchAlgorithm(provider: provider)
         }
         if options.fuzzyMatching {
-          return FuzzyMatchAlgorithm(provider: provider)
+            return FuzzyMatchAlgorithm(provider: provider)
         }
         if options.patternMatch {
-          return PatternMatchAlgorithm(provider: provider)
+            return PatternMatchAlgorithm(provider: provider)
         }
-      return ExactMatchAlgorithm(provider: provider)
+        return ExactMatchAlgorithm(provider: provider)
     }
 
     private func selectFileContentsAlgorithm(options: SearchOptions) -> SearchAlgorithm {
@@ -104,15 +104,15 @@ final class SearchAlgorithmSelector: Sendable {
     private func selectDatabaseAlgorithm(options: SearchOptions) -> SearchAlgorithm {
       let provider = RealtimeDatabaseProvider()
         if options.semantic {
-          return GPTSemanticSearchAlgorithm(provider: provider)
+            return GPTSemanticSearchAlgorithm(provider: provider)
         }
         if options.patternMatch {
-          return PatternMatchAlgorithm(provider: provider)
+            return PatternMatchAlgorithm(provider: provider)
         }
         if options.fuzzyMatching {
-          return FuzzyMatchAlgorithm(provider: provider)
+            return FuzzyMatchAlgorithm(provider: provider)
         }
-      return ExactMatchAlgorithm(provider: provider)
+        return ExactMatchAlgorithm(provider: provider)
     }
 }
 
@@ -306,7 +306,7 @@ final class RealtimeDatabaseProvider: Provider {
 
 /// Algorithm for exact string matching
 struct ExactMatchAlgorithm: SearchAlgorithm {
-  let provider: Provider
+    let provider: Provider
 
     func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
@@ -314,7 +314,6 @@ struct ExactMatchAlgorithm: SearchAlgorithm {
 
         // Filter files based on search term
         var results: [SearchMind.SearchResult] = []
-
 
       for item in items {
           let searchableData = options.caseSensitive ? item.data : item.data.lowercased()
@@ -473,6 +472,7 @@ struct PatternMatchAlgorithm: SearchAlgorithm {
 struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
   let provider: Provider
     func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+      
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
         guard let apiKey = options.apiKey else {
@@ -483,7 +483,7 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
         var results: [SearchMind.SearchResult] = []
 
         for item in items {
-
+          
           let searchableData = options.caseSensitive ? item.data : item.data.lowercased()
 
           let fileEmbedding = try await embed(data: searchableData, apiKey: apiKey)
