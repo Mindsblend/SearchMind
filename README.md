@@ -1,27 +1,36 @@
 <h1 align="center">SearchMind</h1>
 
 <p align="center">
-  <strong>An Intelligent AI-Powered Search Engine Framework for Swift</strong>
+  <strong><em>An Intelligent AI-Powered Search Engine Framework for Swift</em></strong>
 </p>
 
 <p align="center">
-  In today’s digital world, data grows faster than our ability to organize or find it. Files multiply, databases expand, and meaningful information hides under layers of noise.
-</p>
-
-> “The biggest challenge is not having data, but having access to the right data at the right time.” — Bernard Marr
-
-<p align="center">
-  SearchMind is a Swift package designed as an intelligent, adaptable search engine that goes beyond simple keyword matching. It understands context, adapts algorithms dynamically, and seamlessly works with both local files and remote data sources.
+  <em>In today’s digital world, data grows faster than our ability to organize or find it.</em> <br>
+  <strong>Files multiply, databases expand, and meaningful information hides under layers of noise.</strong>
 </p>
 
 <p align="center">
-  Imagine embedding a search engine in your app that doesn’t just look for exact matches but interprets your intent — whether it’s in a text document, a piece of code, or structured data in a database.
+  <em>“The biggest challenge is not having data, but having access to the right data at the right time.”</em><br>
+  <strong>—Bernard Marr</strong>
 </p>
 
-> “Search isn’t just about matching strings. It’s about finding meaning in complexity.” — Kathy Baxter (Google UX researcher)
+<p align="center">
+  <strong>SearchMind</strong> is a Swift package designed as an <strong>intelligent, adaptable search engine</strong> that goes beyond simple keyword matching.
+  <br>It <em>understands context</em>, <em>adapts algorithms dynamically</em>, and <strong>seamlessly works with both local files and remote data sources</strong>.
+</p>
 
 <p align="center">
-  SearchMind is built to deliver insight by unifying diverse search strategies — exact, fuzzy, semantic, and pattern matching — behind a modular, extensible interface.
+  Imagine embedding a search engine in your app that doesn’t just look for exact matches but <em>interprets your intent</em> — whether it’s in a text document, a piece of code, or structured data in a database.
+</p>
+
+<p align="center">
+  <em>“Search isn’t just about matching strings. It’s about finding meaning in complexity.”</em><br>
+  <strong>—Kathy Baxter (Google UX Researcher)</strong>
+</p>
+
+<p align="center">
+  <strong>SearchMind</strong> is built to deliver insight by <em>unifying diverse search strategies</em> — exact, fuzzy, semantic, and pattern matching —
+  <br>behind a <strong>modular, extensible interface</strong> that can power apps, developer tools, or backend engines.
 </p>
 
 ## What SearchMind Is
