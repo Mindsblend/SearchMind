@@ -10,7 +10,10 @@
   Integrate advanced AI-driven search experiences seamlessly into their apps and utilities.
 </p>
 
+
+
 ## Introduction
+> Currently in the development phase. The first version will be released soon.
 
   <em>In today’s digital world, data grows faster than our ability to organize or find it.</em> <br>
   <strong>Files multiply, databases expand, and meaningful information hides under layers of noise.</strong>
