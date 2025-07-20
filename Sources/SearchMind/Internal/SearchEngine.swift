@@ -1,4 +1,5 @@
 import Algorithms
+@preconcurrency import FirebaseDatabase
 import Foundation
 
 /// Protocol defining a search engine
@@ -65,8 +66,10 @@ final class SearchAlgorithmSelector: Sendable {
         case .file:
             return selectFileAlgorithm(options: options)
         case .fileContents:
-            return selectFileContentsAlgorithm(options: options)
-        }
+          return selectFileContentsAlgorithm(options: options)
+        case .database:
+          return selectDatabaseAlgorithm(options: options)
+      }
     }
 
     private func selectFileAlgorithm(options: SearchOptions) -> SearchAlgorithm {
@@ -85,7 +88,21 @@ final class SearchAlgorithmSelector: Sendable {
     }
 
     private func selectFileContentsAlgorithm(options: SearchOptions) -> SearchAlgorithm {
-        let provider = FileProvider()
+      let provider = FileContentsProvider()
+        if options.semantic {
+          return GPTSemanticSearchAlgorithm(provider: provider)
+        }
+        if options.patternMatch {
+          return PatternMatchAlgorithm(provider: provider)
+        }
+        if options.fuzzyMatching {
+          return FuzzyMatchAlgorithm(provider: provider)
+        }
+      return ExactMatchAlgorithm(provider: provider)
+    }
+
+    private func selectDatabaseAlgorithm(options: SearchOptions) -> SearchAlgorithm {
+      let provider = RealtimeDatabaseProvider()
         if options.semantic {
             return GPTSemanticSearchAlgorithm(provider: provider)
         }
@@ -110,21 +127,86 @@ protocol Provider: Sendable {
 }
 
 final class FileProvider: Provider {
+  func fetchItems(for options: SearchOptions) async throws -> [SearchableItem] {
+          let fileManager = FileManager.default
+          var allFiles: [URL] = []
+
+          guard let searchPaths = options.searchPaths else {
+            throw SearchError.searchPathUnavailable
+          }
+
+          for path in searchPaths {
+              var isDirectory: ObjCBool = false
+
+              guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                  throw SearchError.invalidSearchPath(path)
+              }
+
+              if isDirectory.boolValue {
+                  let contents = try fileManager.contentsOfDirectory(
+                      at: URL(fileURLWithPath: path),
+                      includingPropertiesForKeys: [.isRegularFileKey],
+                      options: [.skipsHiddenFiles]
+                  )
+                  for url in contents {
+                      if let isRegular = try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile, isRegular {
+                          allFiles.append(url)
+                      }
+                  }
+              } else {
+                allFiles.append(URL(fileURLWithPath: path))
+              }
+          }
+
+          if let fileExtensions = options.fileExtensions, !fileExtensions.isEmpty {
+              allFiles = allFiles.filter { fileExtensions.contains($0.pathExtension) }
+          }
+
+
+    var searchableItems: [SearchableItem] = []
+
+    for fileURL in allFiles {
+      let id = UUID().uuidString
+      let data = fileURL.lastPathComponent
+      let path = fileURL.path
+      let metadata = SearchSetup().createMetadata(
+            data: data,
+            path: fileURL.path,
+            providerType: .file
+        )
+      
+        let item = SearchableItem(
+          id: id,
+          data: data,
+          path: path,
+          metadata: metadata
+        )
+        searchableItems.append(item)
+    }
+
+    return searchableItems
+      }
+}
+
+final class FileContentsProvider: Provider {
     func fetchItems(for options: SearchOptions) async throws -> [SearchableItem] {
         let fileManager = FileManager.default
         var allFiles: [URL] = []
 
-        let searchPaths = options.searchPaths ?? [URL(fileURLWithPath: fileManager.currentDirectoryPath)]
+        guard let searchPaths = options.searchPaths else {
+            throw SearchError.searchPathUnavailable
+        }
+
         for path in searchPaths {
             var isDirectory: ObjCBool = false
 
-            guard fileManager.fileExists(atPath: path.path, isDirectory: &isDirectory) else {
-                throw SearchError.invalidSearchPath(path.path)
+            guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                throw SearchError.invalidSearchPath(path)
             }
 
             if isDirectory.boolValue {
                 let contents = try fileManager.contentsOfDirectory(
-                    at: path,
+                    at: URL(fileURLWithPath: path),
                     includingPropertiesForKeys: [.isRegularFileKey],
                     options: [.skipsHiddenFiles]
                 )
@@ -134,7 +216,7 @@ final class FileProvider: Provider {
                     }
                 }
             } else {
-                allFiles.append(path)
+                allFiles.append(URL(fileURLWithPath: path))
             }
         }
 
@@ -142,37 +224,111 @@ final class FileProvider: Provider {
             allFiles = allFiles.filter { fileExtensions.contains($0.pathExtension) }
         }
 
-        return allFiles.map {
-            SearchableItem(id: UUID().uuidString, title: $0.lastPathComponent, content: nil, metadata: nil, path: $0.path)
+        var searchableItems: [SearchableItem] = []
+
+        for fileURL in allFiles {
+          let id = UUID().uuidString
+          let data = try String(contentsOf: fileURL)
+          let path = fileURL.path
+          let metadata = SearchSetup().createMetadata(
+                data: data,
+                path: fileURL.path,
+                providerType: .file
+            )
+
+            let item = SearchableItem(
+              id: id,
+              data: data,
+              path: path,
+              metadata: metadata
+            )
+
+            searchableItems.append(item)
         }
+
+        return searchableItems
     }
 }
+
+final class RealtimeDatabaseProvider: Provider {
+  func fetchItems(for options: SearchOptions) async throws -> [SearchableItem] {
+      var searchableItems: [SearchableItem] = []
+      let db = Database.database().reference()
+
+    guard let searchPaths = options.searchPaths else {
+      throw SearchError.searchPathUnavailable
+    }
+
+      for path in searchPaths {
+          let fetchedItems: [SearchableItem] = try await withCheckedThrowingContinuation { continuation in
+              db.child(path).observeSingleEvent(of: .value, with: { snapshot in
+                  guard let value = snapshot.value as? [String: Any] else {
+                    continuation.resume(throwing: SearchError.invalidSnapshotFormat)
+                      return
+                  }
+
+                  var localItems: [SearchableItem] = []
+
+                for (key, value) in value {
+                    if let dict = value as? [String: Any] {
+                        let id = key
+                        let path = "\(path)/\(key)"
+                        let data = SearchSetup().extractText(from: dict)
+
+                        let metadata = SearchSetup().createMetadata(
+                            data: data,
+                            path: path,
+                            providerType: .database
+                        )
+
+                        let item = SearchableItem(
+                            id: id,
+                            data: data,
+                            path: path,
+                            metadata: metadata
+                        )
+
+                        localItems.append(item)
+                    }
+                }
+
+                continuation.resume(returning: localItems)
+              })
+          }
+
+        searchableItems.append(contentsOf: fetchedItems)
+      }
+
+      return searchableItems
+  }
+}
+
 
 /// Algorithm for exact string matching
 struct ExactMatchAlgorithm: SearchAlgorithm {
     let provider: Provider
 
-    func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+    func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
 
         // Filter files based on search term
         var results: [SearchMind.SearchResult] = []
 
-        for item in items {
-            let title = options.caseSensitive ? item.title : item.title.lowercased()
+      for item in items {
+          let searchableData = options.caseSensitive ? item.data : item.data.lowercased()
 
-            if title.contains(searchTerm) {
-                let score = title == searchTerm ? 1.0 : 0.7
+          if searchableData.contains(searchTerm) {
+              let score = searchableData == searchTerm ? 1.0 : 0.7
 
-                results.append(SearchMind.SearchResult(
-                    matchType: .file,
-                    path: item.path,
-                    relevanceScore: score,
-                    matchedTerms: [term]
-                ))
-            }
-        }
+              results.append(SearchMind.SearchResult(
+                  matchType: type,
+                  path: item.path,
+                  relevanceScore: score,
+                  matchedTerms: [term]
+              ))
+          }
+      }
 
         // Sort by relevance score (highest first)
         return results.sorted { $0.relevanceScore > $1.relevanceScore }
@@ -181,8 +337,8 @@ struct ExactMatchAlgorithm: SearchAlgorithm {
 
 /// Algorithm for fuzzy string matching using Swift Algorithms
 struct FuzzyMatchAlgorithm: SearchAlgorithm {
-    let provider: Provider
-    func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+  let provider: Provider
+    func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
 
@@ -190,21 +346,21 @@ struct FuzzyMatchAlgorithm: SearchAlgorithm {
         var results: [SearchMind.SearchResult] = []
 
         for item in items {
-            let title = options.caseSensitive ? item.title : item.title.lowercased()
+            let searchableData = options.caseSensitive ? item.data : item.data.lowercased()
 
             // Using Swift Algorithms to calculate Levenshtein distance
-            let distance = calculateLevenshteinDistance(from: searchTerm, to: title)
+            let distance = calculateLevenshteinDistance(from: searchTerm, to: searchableData)
 
             // Calculate normalized relevance score (0 to 1)
             // Lower distance = higher relevance
-            let maxLength = max(searchTerm.count, title.count)
+            let maxLength = max(searchTerm.count, searchableData.count)
             let normalizedDistance = maxLength > 0 ? Double(distance) / Double(maxLength) : 1.0
             let relevanceScore = 1.0 - normalizedDistance
 
             // Only include results above a certain relevance threshold
             if relevanceScore > 0.3 {
                 results.append(SearchMind.SearchResult(
-                    matchType: .file,
+                    matchType: type,
                     path: item.path,
                     relevanceScore: relevanceScore,
                     matchedTerms: [term]
@@ -254,7 +410,7 @@ struct FuzzyMatchAlgorithm: SearchAlgorithm {
 struct PatternMatchAlgorithm: SearchAlgorithm {
     let provider: Provider
 
-    func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+    func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
 
@@ -262,32 +418,25 @@ struct PatternMatchAlgorithm: SearchAlgorithm {
 
         // Search through file contents (limited to text files)
         for item in items {
-            do {
-                let url = URL(fileURLWithPath: item.path)
-                let itemContents = try String(contentsOf: url)
-                let compareContents = options.caseSensitive ? itemContents : itemContents.lowercased()
+          let searchableData = options.caseSensitive ? item.data : item.data.lowercased()
 
-                // Simple content search to find matches
-                if compareContents.contains(searchTerm) {
-                    // Extract context around the match
-                    let context = extractContext(from: compareContents, around: searchTerm)
+          // Simple content search to find matches
+          if searchableData.contains(searchTerm) {
+              // Extract context around the match
+              let context = extractContext(from: searchableData, around: searchTerm)
 
-                    // Count matches to influence relevance score
-                    let matchCount = compareContents.components(separatedBy: searchTerm).count - 1
-                    let relevanceScore = min(Double(matchCount) * 0.1 + 0.5, 1.0)
+              // Count matches to influence relevance score
+              let matchCount = searchableData.components(separatedBy: searchTerm).count - 1
+              let relevanceScore = min(Double(matchCount) * 0.1 + 0.5, 1.0)
 
-                    results.append(SearchMind.SearchResult(
-                        matchType: .fileContents,
-                        path: item.path,
-                        relevanceScore: relevanceScore,
-                        matchedTerms: [term],
-                        context: context
-                    ))
-                }
-            } catch {
-                // Skip files that can't be read as text
-                continue
-            }
+              results.append(SearchMind.SearchResult(
+                  matchType: type,
+                  path: item.path,
+                  relevanceScore: relevanceScore,
+                  matchedTerms: [term],
+                  context: context
+              ))
+          }
         }
 
         // Sort by relevance score
@@ -321,26 +470,28 @@ struct PatternMatchAlgorithm: SearchAlgorithm {
 
 /// Algorithm for semantic search with AI
 struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
-    let provider: Provider
-    func search(term: String, type _: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+  let provider: Provider
+    func search(term: String, type: SearchType, options: SearchOptions) async throws -> [SearchMind.SearchResult] {
+      
         let searchTerm = options.caseSensitive ? term : term.lowercased()
         let items = try await provider.fetchItems(for: options)
         guard let apiKey = options.apiKey else {
             throw SearchError.missingKey
         }
-        let termEmbedding = try await embed(text: searchTerm, apiKey: apiKey)
+        let termEmbedding = try await embed(data: searchTerm, apiKey: apiKey)
 
         var results: [SearchMind.SearchResult] = []
 
         for item in items {
-            let url = URL(fileURLWithPath: item.path)
-            let content = try String(contentsOf: url)
-            let fileEmbedding = try await embed(text: content, apiKey: apiKey)
+          
+          let searchableData = options.caseSensitive ? item.data : item.data.lowercased()
+
+          let fileEmbedding = try await embed(data: searchableData, apiKey: apiKey)
 
             let similarity = cosineSimilarity(termEmbedding, fileEmbedding)
             if similarity > 0.4 {
                 results.append(SearchMind.SearchResult(
-                    matchType: .fileContents,
+                    matchType: type,
                     path: item.path,
                     relevanceScore: similarity,
                     matchedTerms: [term]
@@ -353,8 +504,8 @@ struct GPTSemanticSearchAlgorithm: SearchAlgorithm {
             .map { $0 }
     }
 
-    private func embed(text: String, apiKey: String) async throws -> [Double] {
-        let request = EmbeddingRequest(model: "text-embedding-ada-002", input: [text])
+    private func embed(data: String, apiKey: String) async throws -> [Double] {
+        let request = EmbeddingRequest(model: "text-embedding-ada-002", input: [data])
         let jsonData = try JSONEncoder().encode(request)
 
         var urlRequest = URLRequest(url: URL(string: "https://api.openai.com/v1/embeddings")!)

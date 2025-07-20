@@ -2,8 +2,7 @@ import Foundation
 
 struct SearchableItem: Sendable {
     let id: String
-    let title: String
-    let content: String?
-    let metadata: [String: String]?
+    let data: String
     let path: String
+    let metadata: [String: String]?
 }

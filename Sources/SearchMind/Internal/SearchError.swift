@@ -22,7 +22,7 @@ import Foundation
 ///     print("Error: \(error.localizedDescription)")
 /// }
 /// ```
-public enum SearchError: Error, LocalizedError, Sendable {
+public enum SearchError: Error, LocalizedError, Sendable, Equatable {
     /// The specified search path does not exist
     ///
     /// This error occurs when a search path provided in `SearchOptions.searchPaths`
@@ -70,6 +70,25 @@ public enum SearchError: Error, LocalizedError, Sendable {
     /// The extraction of the data into the embedding model have failed
     case failedEmbeddingExtraction
 
+    /// The search path must be provided to define the scope of the search operation
+    ///
+    /// This error states that there is not search scope defined to begin the operation on
+    case searchPathUnavailable
+
+    /// An error indicating that the Firebase Realtime Database snapshot value was not in the expected `[String: Any]` dictionary format.
+    ///
+    /// This error is typically thrown when attempting to cast the snapshot's `value` property fails due to:
+    /// - The snapshot being `nil`
+    /// - The snapshot containing data of an unexpected type (e.g. an array, string, number, etc.)
+    /// - The snapshot data being malformed or not structured as a dictionary
+    case invalidSnapshotFormat
+
+    /// The operation of content extraction from the target file is facing issues
+    ///
+    /// Thie error states that the content we are trying to reach is facing
+    /// extraction issues
+    case unableToLoadContent
+
     /// Human-readable description of the error
     ///
     /// This property is part of the `LocalizedError` protocol and provides
@@ -90,6 +109,12 @@ public enum SearchError: Error, LocalizedError, Sendable {
             return "API key not found"
         case .failedEmbeddingExtraction:
             return "Failed to extract embedding from the fetched api data"
+        case .searchPathUnavailable:
+            return "Search path not defined. Can't begin the operation, missing the search scope"
+        case .invalidSnapshotFormat:
+          return "Snapshot data is not in the expected format."
+        case .unableToLoadContent:
+          return "Unable to extract content from the target file"
         }
     }
 }
